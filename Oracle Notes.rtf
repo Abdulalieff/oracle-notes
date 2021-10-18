@@ -1,0 +1,1161 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2580
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fmodern\fcharset0 Courier;\f1\fnil\fcharset134 PingFangSC-Regular;}
+{\colortbl;\red255\green255\blue255;\red38\green38\blue38;\red242\green242\blue242;}
+{\*\expandedcolortbl;;\cssrgb\c20000\c20000\c20000;\cssrgb\c96078\c96078\c96078;}
+\paperw11900\paperh16840\margl1440\margr1440\vieww27740\viewh16380\viewkind0
+\deftab720
+\pard\pardeftab720\sl400\partightenfactor0
+
+\f0\fs28 \cf2 \cb3 \expnd0\expndtw0\kerning0
+\outl0\strokewidth0 \strokec2 		--MY ORACLE NOTES - STUDY CONTINUESLY AND HARD --\
+ 		--------------------------------------------------\
+\
+1)  *--EXECUTION PLAN OF SQL QUERY\
+        SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY_CURSOR('GV0CHTH71F98M')); --GV0CHTH71F98M - SQL_ID, YOU CAN FIND FROM AWR REPORT.\
+ ------------------------------------------------------------------\
+ ------------------------------------------------------------------\
+2)  *--ADDITIONAL INFORMATION ABOUT RUNNING QUERY\
+        SELECT * FROM V$SQL WHERE SQL_ID='C7KVGV263AKJX'\
+        SELECT * FROM V$SQLAREA WHERE SQL_ID='C7KVGV263AKJX'\
+        SELECT B.SID,B.STATUS,B.SERIAL#,B.LAST_CALL_ET,B.PROGRAM,C.SQL_ID,C.SQL_TEXT\
+        FROM  V$SESSION B,V$SQLAREA C\
+        WHERE B.SQL_ID=C.SQL_ID;\
+\
+\
+        SELECT * FROM  V$SESSION_LONGOPS WHERE SQL_ID='B7UD8SW4U7P7H';--1295	28753\
+ ------------------------------------------------------------------\
+ ------------------------------------------------------------------\
+3)  *--DICTIONARY TABLES FOR INDEXES\
+        SELECT * FROM ALL_INDEXES WHERE TABLE_NAME='ACCOUNT'\
+        SELECT * FROM ALL_IND_COLUMNS WHERE TABLE_NAME='ACCOUNT'\
+        SELECT * FROM ALL_IND_STATISTICS\
+        SELECT * FROM ALL_IND_PARTITIONS\
+        SELECT * FROM DICT; -- list of data dictionary tables\
+        SELECT * FROM V$FIXED_TABLE; -- list of dynamic data dictionaries\
+ ------------------------------------------------------------------\
+ ------------------------------------------------------------------\
+4)  *--ORACLE HINTS\
+        /*+ APPEND NOLOGGING */        *-- DONT WRITE QUERY DETAILS TO REDO LOGS\
+        /*+ PARALLEL(N) */             *-- N: 2,4,16 - UP TO RESOURCE PERFORMANCE - FOR RUNNING QUERIES IN PARALLEL this depends on CPU core count\
+        /*+ INDEX(TABLE INDEX_NAME) */ *-- FORCE THE QUERY FOR USING INDEX ON INDEXED COLUMN\
+ ------------------------------------------------------------------\
+ ------------------------------------------------------------------\
+5)  *--LOCKED TABLES AND UNLOCK\
+        SELECT blocking_session, S.INST_ID, L.SESSION_ID SID, S.SERIAL#, L.LOCKED_MODE,L.ORACLE_USERNAME,\
+        L.OS_USER_NAME,S.MACHINE, S.TERMINAL, O.OBJECT_NAME, S.LOGON_TIME\
+        FROM GV$LOCKED_OBJECT L, ALL_OBJECTS O, GV$SESSION S\
+        WHERE L.OBJECT_ID = O.OBJECT_ID\
+        AND L.SESSION_ID = S.SID\
+        ORDER BY SID, S.SERIAL# ;\
+        *--ALTER SYSTEM KILL SESSION 'SID,SERIAL#'; --KILL SESSION\
+        *--ALTER SYSTEM KILL SESSION '1182,7495';\
+        *--KILL SESSION ON OS:\
+\
+        SELECT s.INST_ID, l.session_id sid, s.serial#,s.BLOCKING_SESSION, k.SPID,l.locked_mode,l.oracle_username,\
+        
+\f1 \'a1\'a1\'a1\'a1
+\f0 l.os_user_name,s.machine, o.object_name, s.terminal, s.logon_time\
+        
+\f1 \'a1\'a1\'a1\'a1
+\f0 FROM gv$locked_object l, all_objects o, gv$session s, v$process k\
+        
+\f1 \'a1\'a1\'a1\'a1
+\f0 WHERE l.object_id = o.object_id\
+        
+\f1 \'a1\'a1\'a1\'a1
+\f0 AND l.session_id = s.sid\
+          and s.PADDR=k.ADDR\
+        
+\f1 \'a1\'a1\'a1\'a1
+\f0 ORDER BY sid, s.serial# ;\
+        *--KILL ON OS LEVEL\
+        kill -9 spid\
+ ------------------------------------------------------------------\
+ ------------------------------------------------------------------\
+6)  *--MONITOR INDEX USAGE\
+        ALTER INDEX INDEX_NAME MONITORING USAGE;\
+        SELECT * FROM V$OBJECT_USAGE WHERE INDEX_NAME IN ('IX_ACCOUNT_CRM_ACCT_ID','IX_ACCOUNT','IX_ACCOUNT_CONTRACTID')\
+        ALTER INDEX INDEX_NAME NONMONITORING USAGE;\
+ ------------------------------------------------------------------\
+ ------------------------------------------------------------------\
+7)  *--TABLESPACE USAGE:\
+        SELECT UPPER(F.TABLESPACE_NAME) "TABLESPACE_NAME",\
+               D.TOT_GROOTTE_MB "TABLESPACE_TOTAL_SIZE(GB)",\
+               D.TOT_GROOTTE_MB - F.TOTAL_BYTES "USED_SIZE(GB)",\
+               TO_CHAR(ROUND((D.TOT_GROOTTE_MB - F.TOTAL_BYTES) / D.TOT_GROOTTE_MB * 100,2),'990.99')||'%' "USED PERCENTAGE(%)",\
+               F.TOTAL_BYTES "FREE_SIZE(GB)",\
+               F.MAX_BYTES "MAX_LUMP(GB)"\
+        FROM (SELECT TABLESPACE_NAME,\
+                       ROUND(SUM(BYTES) / (1024 * 1024 * 1024), 2) TOTAL_BYTES,\
+                       ROUND(MAX(BYTES) / (1024 * 1024 * 1024), 2) MAX_BYTES\
+               FROM SYS.DBA_FREE_SPACE\
+               GROUP BY TABLESPACE_NAME) F,\
+             (SELECT DD.TABLESPACE_NAME,\
+                       ROUND(SUM(DD.BYTES) / (1024 * 1024 * 1024), 2) TOT_GROOTTE_MB\
+               FROM SYS.DBA_DATA_FILES DD\
+               GROUP BY DD.TABLESPACE_NAME) D\
+        WHERE D.TABLESPACE_NAME = F.TABLESPACE_NAME\
+        ORDER BY TO_CHAR(ROUND((D.TOT_GROOTTE_MB - F.TOTAL_BYTES) / D.TOT_GROOTTE_MB * 100,2),'990.99')||'%' DESC;\
+\
+        SQL> SELECT * FROM DBA_TABLESPACES -- DATA DICTIONARY\
+        SQL> SELECT * FROM V$TABLESPACE; -- DATA DICTIONARY\
+ ------------------------------------------------------------------\
+ ------------------------------------------------------------------\
+8)  *--ORACLE STATIC FOR PERFORMANCE\
+        EXEC DBMS_STATS.GATHER_TABLE_STATS(OWNNAME => 'schema_name_here', TABNAME => 'tabe_name_here', DEGREE => 4, ESTIMATE_PERCENT=> 0.01); --last run time: 08/05/2016 11:31\
+\
+        BEGIN\
+        DBMS_STATS.GATHER_FIXED_OBJECTS_STATS;\
+        END;\
+\
+       *-- AFTER RUN STATIC CHECK USER_TABLES FOR CHANGES\
+ ------------------------------------------------------------------\
+ ------------------------------------------------------------------\
+9)  *--GET 'N' HOUR BEFORE FROM SYSDATE\
+        SELECT  SYSDATE - INTERVAL 'N' HOUR FROM DUAL;\
+        SELECT  SYSDATE -(N/24) FROM DUAL;\
+ ------------------------------------------------------------------\
+ ------------------------------------------------------------------\
+ 10)*--SEGMENT SIZE\
+        SELECT BYTES/1024/1024/1024  FROM DBA_SEGMENTS WHERE SEGMENT_NAME='TABLE_NAME'\
+ -------------------------------------------------------------------\
+ -------------------------------------------------------------------\
+ 11)*--DATA FILES VIEWS\
+        SQL> SELECT * FROM DBA_DATA_FILES;\
+        SQL> SELECT * FROM V$DATAFILE;\
+        SQL> SELECT * FROM DBA_FREE_SPACE; --FREE SPACE IN DATA FILES\
+\
+        SQL> SELECT * FROM DBA_TEMP_FILES; --TEMP FILES\
+        SQL> SELECT * FROM V$TEMPFILE;\
+        SQL> SELECT * FROM V$TEMP_SPACE_HEADER; --FREE SPACE IN TEMP FILES\
+        SQL> SELECT TABLESPACE_NAME, BYTES_USED/1024/1024/1024, BYTES_FREE/1024/1024/1024 FROM V$TEMP_SPACE_HEADER;\
+        SQL> SELECT * FROM SYS.TS$\
+        SQL> ALTER SESSION SET EVENTS 'IMMEDIATE TRACE NAME DROP_SEGMENTS LEVEL 4'; --level define by F# + 1\
+        SQL> ALTER SESSION SET EVENTS 'IMMEDIATE TRACE NAME DROP_SEGMENTS LEVEL 11';--level define by F# + 1\
+\
+ -------------------------------------------------------------------\
+ -------------------------------------------------------------------\
+ 12)*--CREATE TABLESPACE\
+        SQL> CREATE TABLESPACE ICA_LMTS DATAFILE '/U02/ORACLE/ICA/ICA01.DBF' SIZE 50M EXTENT MANAGEMENT LOCAL AUTOALLOCATE;\
+            *--AUTOALLOCATE CAUSES THE TABLESPACE TO BE SYSTEM MANAGED WITH A MINIMUM EXTENT SIZE OF 64K. THE ALTERNATIVE TO AUTOALLOCATE IS UNIFORM\
+        SQL> CREATE BIGFILE TABLESPACE ICA_BIGTBS  DATAFILE '/U02/ORACLE/ICA/BIGTBS01.DBF' SIZE 50G; --BIGFILE TABLESPACE\
+ -------------------------------------------------------------------\
+ -------------------------------------------------------------------\
+ 13)*--EXTEND TABLESPACE SIZE\
+        SQL> ALTER DATABASE ICA DATAFILE \'91/U01/ORACLE/DATA/ICATBS01.DBF\'92 RESIZE 100M; *-- EXTEND WITH SAME DATA FILE\
+        SQL> ALTER TABLESPACE ADD DATAFILE  \'91/U02/ORACLE/ICA/ICATBS02.DBF\'92 SIZE 50M; *-- EXTEND WITH NEW DATA FILE\
+        SQL> ALTER DATABASE DATAFILE \'91/U01/ORACLE/ICA/ICATBS01.DBF\'92 AUTO EXTEND ON NEXT 5M MAXSIZE 500M; *-- MAKE EXISTING DATAFILE AUTOEXTEND\
+        SQL> CREATE TABLESPACE ICA DATAFILE \'91/U01/ORACLE/ICA/ICATBS01.DBF\'92 SIZE 50M AUTO EXTEND ON NEXT 5M MAXSIZE 500M; *-- MAKE DATAFILE AUTOEXTEND DURING CREATE TABLESPACE\
+\
+    ADDING NEW RAW FILE INTO DATA FILES: --> Need to create LV\
+    1. Check the existing raw files\
+    ls -lrt /dev/raw\
+\
+    2. Check the raw file size\
+    blockdev --getsize /dev/raw/raw***\
+\
+    3. Check the bonding relation\
+    raw -qa\
+\
+    4. Check the free space in VG\
+    vgs -- or vgdisplay\
+\
+    5. Create LV\
+    lvcreate \'96L 15g -n datasda11 datavgsda --lvcreate -L 8g -n sda16 vg_dbfile \
+\
+    6. Bond LV to raw\
+    raw /dev/raw/raw** /dev/datavgsda/datasda11 -- go to /dev/vg_dbfile and find correct path\
+\
+    7. Change permission of the raw file\
+\
+    8. Add datafile in oracle --ALTER TABLESPACE TBS_INV_DAT ADD DATAFILE  '/dev/raw/raw67' SIZE 7G;\
+    go\
+ -------------------------------------------------------------------\
+ -------------------------------------------------------------------\
+ 14)*--DECREASE TABLESPACE SIZE\
+        SQL> ALTER DATABASE DATAFILE \'91/U01/ORACLE/ICA/ICATBS01.DBF\'92 RESIZE 30M;\
+ -------------------------------------------------------------------\
+ -------------------------------------------------------------------\
+ 15)*--COALESCING TABLESPACES\
+        SQL> ALTER TABLESPACE ICA COALESCE; *--YOU SHOULD OFTEN USE THE 'ALTER TABLESPACE ... COALESCE' STATEMENT TO MANUALLY COALESCE ANY ADJACENT FREE EXTENTS.\
+ -------------------------------------------------------------------\
+ -------------------------------------------------------------------\
+ 16)*--MODIFY TABLESPACE\
+        SQL> ALTER TABLESPACE ICA OFFLINE; *-- MAKE TABLESPACE OFFLINE\
+        SQL> ALTER TABLESPACE ICA ONLINE; *-- MAKE TABLESPACE ONLINE\
+        SQL> ALTER DATABASE DATAFILE \'91/U01/ORACLE/ICA/ICA_TBS01.DBF\'92 OFFLINE; *-- MAKE DATAFILE OFFLINE\
+        SQL> ALTER DATABASE DATAFILE \'91/U01/ORACLE/ICA/ICA_TBS01.DBF\'92 ONLINE; *-- MAKE DATAFILE ONLINE\
+        -- NOTE: YOU CAN\'92T TAKE INDIVIDUAL DATAFILES OFFLINE IT THE DATABASE IS RUNNING IN NOARCHIVELOG MODE.\
+        -- IF THE DATAFILE HAS BECOME CORRUPT OR MISSING WHEN THE DATABASE IS RUNNING IN NOARCHIVELOG MODE THEN YOU CAN ONLY DROP IT BY GIVING THE FOLLOWING COMMAND\
+        SQL> ALTER DATABASE DATAFILE \'91/U01/ORACLE/ICA/ICA_TBS01.DBF\'92 OFFLINE FOR DROP;\
+\
+        SQL> ALTER TABLESPACE ICA READ ONLY *-- MAKE TABLESPACE READ ONLY\
+        SQL> ALTER TABLESPACE ICA READ WRITE; *-- MAKE TABLESPACE AGAIN WRITABLE\
+        SQL> ALTER TABLESPACE USERS RENAME TO USERSTS; *-- RENAME TABLESPACE\
+        SQL> DROP TABLESPACE ICA; *-- DROP TABLESPACE\
+        SQL> DROP TABLESPACE ICA INCLUDING CONTENTS; *--DROP TABLESPACE WITH CONTENTS\
+        SQL> DROP TABLESPACE ICA INCLUDING CONTENTS AND DATAFILES; *-- DROP TABLESPACE CONTENTS AND DATAFILES\
+ -------------------------------------------------------------------\
+ -------------------------------------------------------------------\
+ 17)*--RENAMING OR RELOCATING DATAFILES BELONGING TO A SINGLE TABLESPACE\
+        SQL> ALTER TABLESPACE USERS OFFLINE; *-- BRING THE TABLESPACE OFFLINE\
+        $ CP /U01/ORACLE/ICA/USR01.DBF  /U02/ORACLE/ICA/USR01.DBF  *-- COPY THE FILE TO NEW LOCATION\
+        $ MV /U01/ORACLE/ICA/USR02.DBF /U01/ORACLE/ICA/USERS02.DBF *-- RENAME THE FILE TO NEW NAME\
+        SQL> ALTER TABLESPACE USERS RENAME FILE  '/U01/ORACLE/ICA/USR01.DBF', '/U01/ORACLE/ICA/USR02.DBF' TO '/U02/ORACLE/ICA/USR01.DBF', '/U01/ORACLE/ICA/USERS02.DBF'; *-- RENAME AND RELOCATE ON ORACLE LEVEL\
+        SQL> ALTER TABLESPACE USERS ONLINE; *-- BRING THE TABLESPACE ONLINE\
+ -------------------------------------------------------------------\
+ -------------------------------------------------------------------\
+18) *--CREATE TEMP TABLESPACE\
+        --TEMPORARY TABLESPACE IS USED FOR SORTING LARGE TABLES.\
+            SQL> CREATE TEMPORARY TABLESPACE TEMP TEMPFILE \'91/U01/ORACLE/DATA/ICA_TEMP.DBF\'92 SIZE 100M EXTENT MANAGEMENT LOCAL  UNIFORM SIZE 5M;\
+            SQL> ALTER DATABASE TEMPFILE '/U02/ORACLE/DATA/LMTEMP02.DBF' RESIZE 18M; --INCREASE OR DECREASE TEMP TABLESPACE\
+            SQL> ALTER DATABASE TEMPFILE '/U02/ORACLE/DATA/LMTEMP02.DBF' DROP  INCLUDING DATAFILES; --DROP TEMP FILE\
+            SQL> CREATE TEMPORARY TABLESPACE ica_temp2 TEMPFILE '/u02/oracle/ica/ica_temp.dbf' SIZE 50M TABLESPACE GROUP group1; -- TEMP TABLESPACE GROUPS\
+                        --Temporary tablespace group has the following benefits:\
+                            --It allows multiple default temporary tablespaces to be specified at the database level.\
+                            --It allows the user to use multiple temporary tablespaces in different sessions at the same time.\
+                            --It allows a single SQL operation to use multiple temporary tablespaces for sorting.\
+            SQL> select * from V$TEMP_SPACE_HEADER; --FREE SPACE IN TEMP FILES\
+ -------------------------------------------------------------------\
+ -------------------------------------------------------------------\
+ 19)*--CORRUPTED DATA BLOCKS\
+        SQL> SELECT * FROM V$DATABASE_BLOCK_CORRUPTION;\
+        RESULT: FILE# BLOCK# BLOCKS CORRUPTION_CHANGE# CORRUPTIO\
+            5       81     4     0                 CORRUPT\
+    FIND BLOCK:\
+            select\
+               segment_name,\
+               segment_type\
+            from\
+               dba_extents\
+            where\
+               file_id = 4\
+            and\
+               155 between\
+               (block_id and block_id + blocks - 1);\
+    *--IF CORRUPTED BLOCK IS INDEX JUST REBUILD IT LIKE BELOW.\
+            set lines 90;\
+            set heading off;\
+            set feedback off;\
+\
+            spool runme.sql\
+\
+            select\
+            'alter index '||owner||'.'||index_name||' rebuild online tablespace sysaux;'\
+            from\
+            dba_indexes\
+            where tablespace_name = 'SYSAUX';\
+\
+            spool off\
+\
+            spool rebuild.lst\
+            @runme.sql\
+            spool off\
+ -------------------------------------------------------------------\
+ -------------------------------------------------------------------\
+20) *--EXPORT AND IMPORT DATA WITH DATA PUMP FROM ORACLE\
+        *--EXPORT\
+            #!/bin/ksh\
+            expdp system/system directory=directory_name_here tables=schema_name.table_name dumpfile=dump_file_name.dmp CONTENT=data_only  -- for export\
+        *--IMPORT\
+            #!/bin/ksh\
+            impdp system/oracle directory=directory_name_here tables=schema_name.table_name dumpfile=dump_file_name.dmp REMAP_SCHEMA=source_schema:target_schema -- for import\
+            select * from dba_directories --DIRECTORY FOR DATABASE\
+\
+      HOW TO STOP EXPDP TASKS\
+      query the view dba_datapump_jobs to check the running tasks\
+        select * from dba_datapump_jobs;\
+      [oracle@database ~]$ expdp sys/oracle as sysdba attach=SYS_EXPORT_SCHEMA_02\
+      stop_job= IMMEDIATE;\
+      kill_job;\
+      select * from dba_datapump_jobs;\
+\
+ -------------------------------------------------------------------\
+ -------------------------------------------------------------------\
+ 21)*--MANAGING REDO LOG FILES\
+            Every Oracle database must have at least 2 redo logfile groups. Oracle writes all statements except, SELECT statement, to the logfiles.\
+            This is done because Oracle performs deferred batch writes i.e. it does write changes to disk per statement instead it performs write in batches.\
+            So in this case if a user updates a row, Oracle will change the row in db_buffer_cache and records the statement in the logfile\
+            and give the message to the user that  row is updated. Actually the row is not yet written back to the datafile\
+            but still it give the message to the user that row is updated. After 3 seconds the row is actually written to the datafile.\
+            This is known as deferred batch writes.\
+             SQL> ALTER DATABASE ADD LOGFILE GROUP 3  \'91/U01/ORACLE/ICA/LOG3.ORA\'92 SIZE 10M; -- ADD NEW REDO LOG FILE GROUP; max redo log file is bordered by MAXLOGFILES parameter.\
+             SQL> ALTER DATABASE ADD LOGFILE MEMBER \'91/U01/ORACLE/ICA/LOG11.ORA\'92 TO GROUP 1; -- ADD NEW REDO LOG FILE INTO GROUP; max group member is bordered by MAXLOGMEMBERS parameter.\
+            --Important: Is it strongly recommended that you multiplex logfiles i.e. have at least two log members, one member in one disk and another in second disk, in a database.\
+\
+        *--DROPPING LOG FILES - 1) IF YOU WANT TO DROP MEMBERS FROM THE CURRENT GROUP, FORCE A LOG SWITCH OR WAIT SO THAT LOG SWITCH OCCURS AND ANOTHER GROUP BECOMES CURRENT.\
+            SQL> ALTER SYSTEM SWITCH LOGFILE; --To force a log switch give the following command\
+            SQL> ALTER DATABASE DROP LOGFILE MEMBER \'91/U01/ORACLE/ICA/LOG11.ORA\'92; --command can be used to drop a logfile member\
+        --NOTE: WHEN YOU DROP LOGFILES THE FILES ARE NOT DELETED FROM THE DISK. YOU HAVE TO USE O/S COMMAND TO DELETE THE FILES FROM DISK.\
+\
+        *--DROPPING LOG FILE GROUPS - 1)IF THE DATABASE IS HAVING MORE THAN TWO GROUPS AND IF IT IS NOT THE CURRENT GROUP.\
+            SQL> ALTER DATABASE DROP LOGFILE GROUP 3;\
+        --NOTE: WHEN YOU DROP LOGFILES THE FILES ARE NOT DELETED FROM THE DISK. YOU HAVE TO USE O/S COMMAND TO DELETE THE FILES FROM DISK.\
+        --NOTE: YOU CANNOT RESIZE LOGFILES. IF YOU WANT TO RESIZE A LOGFILE CREATE A NEW LOGFILE GROUP WITH THE NEW SIZE AND SUBSEQUENTLY DROP THE OLD LOGFILE GROUP.\
+\
+        *--RENAMING OR RELOCATING LOGFILES\
+           --FOR EXAMPLE, SUPPOSE YOU WANT TO MOVE A LOGFILE FROM \'91/U01/ORACLE/ICA/LOG1.ORA\'92 TO \'91/U02/ORACLE/ICA/LOG1.ORA\'92, THEN DO THE FOLLOWING\
+            1. SHUTDOWN THE DATABASE\
+                SQL> shutdown immediate;\
+            2. MOVE THE LOGFILE FROM OLD LOCATION TO NEW LOCATION USING OPERATING SYSTEM COMMAND\
+                $mv /u01/oracle/ica/log1.ora  /u02/oracle/ica/log1.ora\
+            3. START AND MOUNT THE DATABASE\
+                SQL> startup mount\
+            4. NOW GIVE THE FOLLOWING COMMAND TO CHANGE THE LOCATION IN CONTROLFILE\
+                SQL> alter database rename file \'91/u01/oracle/ica/log1.ora\'92 to \'91/u02/oracle/ica/log2.ora\'92;\
+            5. OPEN THE DATABASE\
+                SQL> alter database open;\
+\
+        *--CLEARING REDO LOGFILES\
+            A redo log file might become corrupted while the database is open, and ultimately stop database activity because archiving cannot continue.\
+            In this situation the ALTER DATABASE CLEAR LOGFILE statement can be used reinitialize the file without shutting down the database.\
+\
+            SQL> ALTER DATABASE CLEAR LOGFILE GROUP 3; --STATEMENT CLEARS THE LOG FILES IN REDO LOG GROUP NUMBER 3;\
+\
+        *--VIEWING INFORMATION ABOUT LOG FILES FROM SQL\
+            SQL> SELECT * FROM V$LOG;\
+            SQL> SELECT * FROM V$LOGFILE;\
+        ***--SWITCHOVER FREQUENCY OF REDO LOG FILES IN THE ORACLE DATABASE IS ABNORMAL\
+                --DROP SMALL SIZE LOG FILES WITH THE STATUS "INACTIVE"\
+                    select GROUP#,THREAD#,BYTES/1024/1024 mb,MEMBERS,STATUS from v$Log order by thread#,group#;\
+                    select group#,member,type,status from v$Logfile;\
+                    alter database add logfile thread 2 group 23 '+DG_DATA' SIZE 4G ;\
+                    alter database add logfile thread 2 group 24 '+DG_DATA' SIZE 4G ; \
+\
+                    alter database drop logfile group 3;\
+                    alter database drop logfile group 4;\
+\
+                    alter database add logfile thread 1 group 13 '+DG_DATA' SIZE 4G ;\
+                    alter database add logfile thread 1 group 14 '+DG_DATA' SIZE 4G ;\
+                    alter database drop logfile group 1;\
+                    alter database drop logfile group 2;\
+        *--LOG HISTORY\
+            select to_char(first_time, 'yyyy/mm/dd:hh24') "Date",\
+                   to_char(thread#) thread#,\
+                   count(1) "Archives_in_last_7_days/hour"\
+            from v$log_history\
+            where trunc(first_time) in (trunc(sysdate),\
+                                        trunc(sysdate - 1),\
+                                        trunc(sysdate - 2),\
+                                        trunc(sysdate - 3))\
+             group by to_char(first_time, 'yyyy/mm/dd:hh24'), thread#\
+             order by thread#, 1;\
+ -------------------------------------------------------------------\
+ -------------------------------------------------------------------\
+ 22)*--RECOVER DROPPED TABLE\
+        SELECT * FROM USER_RECYCLEBIN WHERE ORIGINAL_NAME='ICCID_IMSI' --iF UNDROP IS 'YES' THEN FLASHBACK TABLE.\
+        FLASHBACK TABLE 'TABLE_NAME' TO BEFORE DROP;\
+        SELECT * FROM XXXX AS OF TIMESTAMP (SYSTIMESTAMP - INTERVAL '60' MINUTE);--(SYSTIMESTAMP - INTERVAL  '1' DAY);\
+ -------------------------------------------------------------------\
+ -------------------------------------------------------------------\
+\
+ 23)*--CHECK DB_NAME\
+        SELECT SYS_CONTEXT('USERENV','DB_NAME') FROM DUAL;\
+        SELECT ORA_DATABASE_NAME FROM DUAL;\
+        SELECT * FROM GLOBAL_NAME;\
+ -------------------------------------------------------------------\
+ -------------------------------------------------------------------\
+\
+25)*--DB USER PASSWORD\
+        ALTER USER user_name IDENTIFIED BY password;\
+ -------------------------------------------------------------------\
+ -------------------------------------------------------------------\
+\
+26)*--SYNOYMS\
+        SELECT TABLE_OWNER, TABLE_NAME FROM DBA_SYNONYMS WHERE SYNONYM_NAME = 'GV$SESSION'; --THIS WILL HELP YOU TO GRANT SYNONYMS BY THE HELP OF REAL TABLE.\
+        GRANT SELECT ON GV_$SESSION TO SCOTT;\
+ -------------------------------------------------------------------\
+ -------------------------------------------------------------------\
+\
+ 27)*--ORACLE JOB SCHEDULE\
+\
+    ALTER SESSION SET NLS_LANGUAGE= 'AMERICAN';\
+    ALTER SESSION SET NLS_TERRITORY= 'AMERICA';\
+\
+    BEGIN\
+      DBMS_SCHEDULER.CREATE_JOB (\
+       job_name           =>  'COLLECT_ORACLE_STATICS',\
+       job_type           =>  'STORED_PROCEDURE',\
+       job_action         =>  'P_FORACLE_STATICS',\
+       start_date         =>  '27-SEP-16 02.05.00 PM', -- this value should be in timestamp format for ex: TO_TIMESTAMP(systimestamp + 8/24)\
+       enabled            =>   TRUE,\
+       repeat_interval    =>  'FREQ=MONTHLY; BYMONTHDAY=15;', /* Run twice on every month. */ --first automatic running time is 15 dat later\
+       comments           =>  'COLLECT ORACLE STATICS');\
+    END;\
+    /\
+\
+    --ENABLE JOB\
+    BEGIN\
+    DBMS_SCHEDULER.ENABLE ('COLLECT_ORACLE_STATICS'); -- if you didnt mention enable flag then can be enable like this\
+    END;\
+    /\
+\
+    --RUN JOB\
+    BEGIN\
+      DBMS_SCHEDULER.RUN_JOB(\
+        JOB_NAME            => 'COLLECT_ORACLE_STATICS');\
+    END;\
+    /\
+\
+    --STOP JOB\
+    BEGIN\
+    DBMS_SCHEDULER.STOP_JOB('COLLECT_ORACLE_STATICS');\
+    END;\
+    /\
+\
+    --DROP JOB\
+    BEGIN\
+    DBMS_SCHEDULER.DROP_JOB ('COLLECT_ORACLE_STATICS'); -- drop oracle job\
+    END;\
+    /\
+\
+    --DATA DICTIONARIES ABOUT JOBS\
+    SELECT * FROM  DBA_SCHEDULER_JOB_LOG T WHERE T.JOB_NAME='COLLECT_ORACLE_STATICS';\
+    SELECT * FROM  DBA_SCHEDULER_JOBS T WHERE T.JOB_NAME='COLLECT_ORACLE_STATICS';\
+    SELECT * FROM  ALL_SCHEDULER_JOB_RUN_DETAILS T WHERE T.JOB_NAME='COLLECT_ORACLE_STATICS';\
+    SELECT * FROM  DBA_JOBS_RUNNING;\
+\
+    DBA_AUTOTASK_CLIENT - displays statistical data for each automated maintenance task over 7-day and 30-day periods.\
+    SELECT * FROM DBA_AUTOTASK_CLIENT\
+    SELECT * FROM DBA_AUTOTASK_WINDOW_CLIENTS;\
+    SELECT * FROM DBA_SCHEDULER_WINDOWS\
+\
+    --AUTOMATED DATABASE MAINTENANCE TASKS\
+    --Oracle 11g includes three automated database maintenance tasks:\
+        AUTOMATIC OPTIMIZER STATISTICS COLLECTION - Gathers stale or missing statistics for all schema objects. The task name is 'auto optimizer stats collection'.\
+        AUTOMATIC SEGMENT ADVISOR                 - Identifies segments that could be reorganized to save space. The task name is 'auto space advisor'.\
+        AUTOMATIC SQL TUNING ADVISOR              - Identifies and attempts to tune high load SQL. The task name is 'sql tuning advisor'.\
+\
+    DBMS_AUTO_TASK_ADMIN.DISABLE (\
+        client_name       IN    VARCHAR2,  -- get client_name  from DBA_AUTOTASK_CLIENT\
+        operation         IN    VARCHAR2,  -- get operation    from DBA_AUTOTASK_OPERATION      - can be set null\
+        window_name       IN    VARCHAR2); -- get windows name from DBA_AUTOTASK_WINDOW_CLIENTS\
+\
+    DBMS_AUTO_TASK_ADMIN.ENABLE (\
+        client_name       IN    VARCHAR2,  -- get client_name  from DBA_AUTOTASK_CLIENT\
+        operation         IN    VARCHAR2,  -- get operation    from DBA_AUTOTASK_OPERATION      - can be set null\
+        window_name       IN    VARCHAR2); -- get windows name from DBA_AUTOTASK_WINDOW_CLIENTS\
+\
+    begin\
+        dbms_auto_task_admin.disable(client_name=>'auto optimizer stats collection',operation=>NULL,window_name=>NULL);\
+        dbms_auto_task_admin.disable;\
+        dbms_auto_task_admin.disable('auto optimizer stats collection', null,'WEDNESDAY_WINDOW');\
+        dbms_auto_task_admin.disable('auto optimizer stats collection', null,'FRIDAY_WINDOW');\
+        dbms_auto_task_admin.disable('auto optimizer stats collection', null,'SATURDAY_WINDOW');\
+        dbms_auto_task_admin.disable('auto optimizer stats collection', null,'THURSDAY_WINDOW');\
+        dbms_auto_task_admin.disable('auto optimizer stats collection', null,'TUESDAY_WINDOW');\
+        dbms_auto_task_admin.disable('auto optimizer stats collection', null,'SUNDAY_WINDOW');\
+        dbms_auto_task_admin.disable('auto optimizer stats collection', null,'MONDAY_WINDOW');\
+    end;\
+ -------------------------------------------------------------------\
+ -------------------------------------------------------------------\
+\
+28)*--ACTIVE SESSION TEMP USAGE\
+    SELECT\
+        S.sid,\
+        SUM(T.blocks) * TBS.block_size / 1024 / 1024 / 1024 gb_used,\
+        S.serial# sid_serial,\
+        s.INST_ID,\
+        S.username,\
+        S.osuser,\
+        s.status,\
+        P.spid,\
+        S.module,\
+        P.program,\
+        T.tablespace,\
+        q.sql_text,\
+        nvl(S.sql_id, S.PREV_SQL_ID) sql_id\
+    FROM\
+        gv$sort_usage    T,\
+        gv$session       S,\
+        dba_tablespaces  TBS,\
+        gv$process       P,\
+        gv$sql           q\
+    WHERE T.session_addr = S.saddr\
+      AND T.INST_ID = S.INST_ID\
+      AND S.paddr = P.addr\
+      AND S.INST_ID = P.INST_ID\
+      AND nvl(S.sql_id, S.PREV_SQL_ID) = q.sql_id\
+      AND T.tablespace = TBS.tablespace_name\
+      AND Q.CHILD_NUMBER = S.SQL_CHILD_NUMBER\
+      AND S.STATUS = 'ACTIVE'\
+    GROUP BY S.sid,\
+          S.serial#,\
+          s.INST_ID,\
+          S.username,\
+          S.osuser,\
+          P.spid,\
+          s.status,\
+          S.module,\
+          P.program,\
+          TBS.block_size,\
+          T.tablespace,\
+          q.sql_text,\
+          nvl(S.sql_id, S.PREV_SQL_ID)\
+    HAVING SUM(T.blocks) * TBS.block_size / 1024 / 1024 / 1024 > 2\
+    ORDER BY 2 DESC;\
+\
+ -------------------------------------------------------------------\
+ -------------------------------------------------------------------\
+\
+29)*-- CREATE DATABASE LINK AND DROP\
+\
+    create public database link link2surveydb connect to survey_rep identified by pasword_here using '(DESCRIPTION_LIST =\
+        (FAILOVER = TRUE)\
+        (LOAD_BALANCE = FALSE)\
+        (DESCRIPTION =\
+        (ADDRESS =\
+          (PROTOCOL = TCP)\
+          (HOST = hostname_here)(PORT = port_here))\
+          (CONNECT_DATA =\
+            (SERVICE_NAME = service_name_here)\
+            (SERVER = DEDICATED)\
+          )\
+        )\
+        (DESCRIPTION =\
+        (ADDRESS =\
+          (PROTOCOL = TCP)\
+          (HOST = hostname_here)(PORT = port_here))\
+          (CONNECT_DATA =\
+            (SERVICE_NAME = service_name_here)\
+            (SERVER = DEDICATED)\
+          )\
+        )\
+    )\
+    '\
+\
+    DROP PUBLIC DATABASE LINK link2surveydb;\
+    SELECT * FROM DBA_DB_LINKS;\
+ -------------------------------------------------------------------\
+ -------------------------------------------------------------------\
+\
+30)*-- ADD PARTIITON\
+\
+    declare\
+        str_date varchar2(8);\
+    begin\
+        str_date := '20161101';\
+        for i in 1 .. 10 loop\
+            execute immediate 'alter table schema_name.table_name_here add partition pr_data_day_' || str_date || ' values(' || str_date|| ')';\
+            str_date := to_char(to_date(str_date, 'yyyymmdd') + 1, 'yyyymmdd');\
+        end loop;\
+    end;\
+    -- MODIFY PARTITIONS\
+        alter table schema_name.table_name_here add partition pr_data_day_YYYYMMDD values('YYYYMMDD');\
+        alter table schema_name.table_name_here drop partition pr_data_day_YYYYMMDD;\
+        alter table schema_name.table_name_here truncate partition pr_data_day_YYYYMMDD;\
+\
+  create table table_name_here\
+    (\
+    data_day VARCHAR2(8),\
+    sub_id VARCHAR2(50),\
+    org_id VARCHAR2(50),\
+    staff_id VARCHAR2(50),\
+    busi_date VARCHAR2(50),\
+    source_mark VARCHAR2(50)\
+    )\
+    partition by list (data_day)\
+    (\
+    partition PR_DATA_DAY_YYYYMMDD values ('YYYYMMDD')\
+    tablespace tablespace_name_here\
+    );\
+\
+    --- CTAS WITH PARITION\
+    create /*+append nologging*/table table_name_here\
+    partition by list (data_day)\
+    (\
+    partition PR_DATA_DAY_20171204 values ('20171204')\
+    tablespace tablespace_name_here\
+    ) as\
+    select /*+parallel(8)*/* from table_name_here;\
+    ;\
+\
+  --- EXCHANGE PARTITION\
+    ALTER TABLE table_name_here EXCHANGE PARTITION pr_data_day_20171204 WITH TABLE target_table_name_here; -- target table should be non-paritiotioned table(target_table_here)\
+\
+ -------------------------------------------------------------------\
+ -------------------------------------------------------------------\
+\
+31)*-- RMAN\
+\
+    $rman target / nocatalog\
+\
+    RMAN> show all;\
+\
+    RMAN> report schema;\
+\
+    RMAN> report obsolete;\
+\
+    RMAN> report unrecoverable;\
+\
+    RMAN> list backup;\
+    RMAN> list backup of database;\
+    RMAN> list backup of tablespace table_name;\
+    RMAN> list backup of controlfile;\
+    RMAN> list backup of spfile;\
+    RMAN> list backupset id;\
+\
+    RMAN> crosscheck backup;\
+    RMAN> crosscheck backup of database;\
+    RMAN> crosscheck backup of tablespace system;\
+    RMAN> crosscheck backup of controlfile;\
+    RMAN> crosscheck backup of spfile;\
+    RMAN> crosscheck backup of archivelog all;\
+\
+    --WHEN SOME ARCHIVE FILES DELETED AND RMAN FAILED DUE TO: RMAN-06059: expected archived log not found, loss of archived log compromises recoverability\
+    RMAN>crosscheck archivelog all;\
+    RMAN>delete noprompt expired archivelog all;\
+\
+    Archivelog files\
+    RMAN> delete archivelog all;\
+\
+    archivelog files\
+    RMAN> delete force archivelog until time 'sysdate -1';\
+\
+    RMAN> delete noprompt force archivelog until time 'sysdate -2';\
+\
+    Archivelog files\
+    RMAN> delete expired archivelog all; \
+\
+    RMAN> delete obsolete;\
+    RMAN> delete noprompt obsolete;\
+\
+    RMAN> delete expired backup;\
+    --expired\
+    RMAN> delete expired ;\
+\
+    RMAN> delete backupset id;\
+    RMAN> delete backup;\
+\
+    RMAN> change backupset id unavailable;\
+\
+    RMAN> change backupset id keep forever logs;\
+    RMAN> change backupset id keep until time 'sysdate+30' logs;\
+    RMAN> change backupset id nokeep;\
+\
+    RMAN>configure retention policy to recovery window of 30 days;\
+\
+    CONFIGURE RETENTION POLICY TO REDUNDANCY n ;\
+\
+    CONFIGURE RETENTION POLICY TO NONE;\
+\
+    set archivelog destination to 'e:\\temp';\
+ -------------------------------------------------------------------\
+ -------------------------------------------------------------------   \
+\
+32)*-- CREATE DATABASE\
+    CREATE DATABASE "TEST1"\
+    DATAFILE '/u01/app/oracle/oradata/TEST1/system01.dbf'\
+    SIZE 300M REUSE AUTOEXTEND ON NEXT 10240K MAXSIZE UNLIMITED\
+    EXTENT MANAGEMENT LOCAL\
+\
+    SYSAUX DATAFILE '/u01/app/oracle/oradata/TEST1/sysaux01.dbf'\
+    SIZE 120M REUSE AUTOEXTEND ON NEXT 10240K MAXSIZE UNLIMITED\
+\
+    SMALLFILE DEFAULT TEMPORARY TABLESPACE TEMP\
+    TEMPFILE '/u01/app/oracle/oradata/TEST1/temp01.dbf'\
+    SIZE 20M REUSE AUTOEXTEND ON NEXT 640K MAXSIZE UNLIMITED\
+\
+    SMALLFILE UNDO TABLESPACE "UNDOTBS1"\
+    DATAFILE '/u01/app/oracle/oradata/TEST1/undotbs01.dbf'\
+    SIZE 200M REUSE AUTOEXTEND ON NEXT 5120K MAXSIZE UNLIMITED\
+\
+    DEFAULT TABLESPACE "USERS"\
+    DATAFILE '/u01/app/oracle/oradata/TEST1/users01.dbf'\
+    SIZE 5M REUSE AUTOEXTEND ON NEXT 1280K MAXSIZE UNLIMITED\
+\
+    EXTENT MANAGEMENT LOCAL SEGMENT SPACE MANAGEMENT AUTO\
+    CHARACTER SET UTF8\
+    NATIONAL CHARACTER SET AL16UTF16\
+\
+    LOGFILE\
+    GROUP 1 ('/u01/app/oracle/oradata/TEST1/redo01.log') SIZE 51200K,\
+    GROUP 2 ('/u01/app/oracle/oradata/TEST1/redo02.log') SIZE 51200K,\
+    GROUP 3 ('/u01/app/oracle/oradata/TEST1/redo03.log') SIZE 51200K\
+\
+    SET DEFAULT SMALLFILE TABLESPACE\
+\
+    USER SYS IDENTIFIED BY mysupersekret\
+    USER SYSTEM IDENTIFIED BY supersekret;\
+ -------------------------------------------------------------------\
+ -------------------------------------------------------------------     \
+\
+33)*-- CPU USAGE OF RUNNING SQL\
+    select ss.username,\
+       se.SID,\
+       VALUE / 100 cpu_usage_seconds,\
+       sq.SQL_TEXT,\
+       sq.SQL_FULLTEXT,\
+       sq.SQL_ID\
+    from v$session ss, v$sesstat se, v$statname sn, V$SQLAREA sq\
+    where se.STATISTIC# = sn.STATISTIC#\
+        and NAME like '%CPU used by this session%'\
+        and se.SID = ss.SID\
+        and ss.SQL_ID = sq.SQL_ID\
+        and ss.status = 'ACTIVE'\
+        and ss.username is not null\
+    order by VALUE desc;\
+ -------------------------------------------------------------------\
+ -------------------------------------------------------------------\
+34)*-- DROP PARTITIONS FOR RANGE\
+\
+    declare\
+        cursor drop_partition is\
+        select *\
+          from all_tab_partitions t\
+         where t.table_name = 'table_name_here'\
+           and t.table_owner = 'schema_name_here'\
+           AND t.partition_name between 'PR_DATA_DAY_20160101' and\
+               'PR_DATA_DAY_20161031'\
+         order by t.partition_name;\
+\
+        type record_type is table of drop_partition%rowtype;\
+        rec record_type;\
+        i_limit number := 30;\
+    begin\
+        open drop_partition;\
+        loop\
+            fetch drop_partition bulk collect into rec limit i_limit;\
+            exit when rec.count=0;\
+            for i in 1 .. rec.count loop\
+                    --dbms_output.put_line(rec(i).partition_name);\
+                    execute immediate 'alter table table_name_here drop partition ' ||rec(i).partition_name;\
+            end loop;\
+        end loop;\
+        close drop_partition;\
+    end;\
+\
+  -------------------------------------------------------------------------------------------------------------\
+  -------------------------------------------------------------------------------------------------------------\
+\
+35)*-- ORACLE SEGMENT ADVISORS\
+    select * from DBA_ADVISOR_USAGE;\
+    select * from DBA_ADVISOR_FINDINGS;\
+    select * from DBA_ADVISOR_RECOMMENDATIONS;\
+    select * from DBA_ADVISOR_ACTIONS;\
+    select * from DBA_ADVISOR_OBJECTS\
+\
+36)*-- SHRINK SPACE\
+\
+    Here is a working example that invokes Segment Advisor to analyze a table and uses the\
+    Shrink option to reclaim the unused space. Table XX_DATA is a table with several inserts\
+    and deletes, thus prone to fragmentation. Let\'92s run Segment Advisor on this table to\
+    determine if there is any reclaimable space.\
+    Running Segment Advisor involves four DBMS_ADVISOR procedures. First, define the task,\
+    then add objects to the task, then define expected recommendations, and finally execute\
+    the task.\
+\
+        SQL> EXEC DBMS_ADVISOR.CREATE_TASK (advisor_name=>'Segment Advisor', task_name=> 'XX_DATA_SEG_ADV');\
+        PL/SQL procedure successfully completed.\
+\
+        SQL> DECLARE\
+        objid NUMBER;\
+        BEGIN\
+        DBMS_ADVISOR.CREATE_OBJECT (task_name=> 'XX_DATA_SEG_ADV',\
+        object_type=> 'TABLE',\
+        attr1 => 'SYSTEM',\
+        attr2 => 'XX_DATA',\
+        attr3 => NULL,\
+        attr4 => 'NULL',\
+        attr5 => NULL,\
+        object_id => objid);\
+        END;\
+        /\
+        PL/SQL procedure successfully completed.\
+\
+        SQL>\
+        SQL> EXEC DBMS_ADVISOR.SET_TASK_PARAMETER (task_name => 'XX_DATA_SEG_ADV',\
+        parameter => 'RECOMMEND_ALL', value => 'TRUE');\
+        PL/SQL procedure successfully completed.\
+\
+        SQL>\
+        SQL> EXEC DBMS_ADVISOR.EXECUTE_TASK (task_name => 'XX_DATA_SEG_ADV');\
+        PL/SQL procedure successfully completed.\
+\
+        Now, query DBA_ADVISOR_FINDINGS for the findings.\
+        SQL> SELECT message, more_info\
+        FROM DBA_ADVISOR_FINDINGS\
+        WHERE task_name = 'XX_DATA_SEG_ADV';\
+        MESSAGE\
+        MORE_INFO\
+        --------------------------------------------------------------------------------\
+        Enable row movement of the table SYSTEM.XX_DATA and perform shrink, estimated\
+        savings is 252134195 bytes.\
+        Allocated Space:503316480: Used Space:251182285: Reclaimable Space :252134195\
+        SQL>\
+\
+        SQL> SELECT benefit_type\
+        FROM dba_advisor_recommendations\
+        WHERE task_name = 'XX_DATA_SEG_ADV';\
+        BENEFIT_TYPE\
+        --------------------------------------------------------------------------------\
+        Enable row movement of the table SYSTEM.XX_DATA and perform shrink, estimated\
+        savings is 252134195 bytes.\
+        SQL>\
+\
+        So our expectation was correct. The XX_DATA table does have some reclaimable space.\
+        Validate the current allocated space and then perform the Shrink Space operation.\
+        SQL> SELECT bytes FROM dba_segments\
+        WHERE segment_name = 'XX_DATA';\
+        BYTES\
+        ----------\
+        503316480\
+        SQL>\
+\
+        Now, follow the recommendation. First, we will perform the COMPACT to show the impact\
+        on allocated space, and then we will perform a shrink.\
+        SQL> ALTER TABLE xx_data ENABLE ROW MOVEMENT;\
+        Table altered.\
+        SQL> ALTER TABLE xx_data SHRINK SPACE COMPACT;\
+        Table altered.\
+        SQL> SELECT bytes FROM dba_segments\
+        WHERE segment_name = 'XX_DATA';\
+        BYTES\
+        ----------\
+        503316480\
+        SQL> ALTER TABLE xx_data SHRINK SPACE;\
+        Table altered.\
+        SQL> SELECT bytes FROM dba_segments\
+        WHERE segment_name = 'XX_DATA';\
+        BYTES\
+        ----------\
+        212598784\
+        SQL>\
+\
+37)*-- CHECK ALERT LOG DESTINATION\
+    show parameter BACKGROUND_DUMP_DEST\
+    SELECT * FROM V$DIAG_INFO\
+\
+38)*-- CHECK CONTROL FILES\
+    select * from v$controlfile;\
+    select * from v$controlfile_record_section\
+\
+39)*-- DATA REDACTION\
+    -- FULL REDACTION\
+    BEGIN\
+        DBMS_REDACT.ADD_POLICY (\
+               object_schema         => 'HR',\
+               object_name           => 'full_redact_num',\
+               column_name           => 'code',\
+               policy_name           => 'Full_num_redact',\
+               function_type         => DBMS_REDACT.FULL,\
+               policy_description    => 'Full redaction on num col',\
+               expression            => '1=1');\
+    END;\
+    /\
+    -- PARTIAL REDACTION\
+    BEGIN\
+    DBMS_REDACT.ADD_POLICY(\
+       object_schema       => 'HR',\
+       object_name         => 'partial_redact_char',\
+       column_name         => 'name',\
+       policy_name         => 'partial_char_redact',\
+       function_type       => DBMS_REDACT.PARTIAL,\
+       function_parameters => 'VVVVV,VVVVV,*,2,4',\
+       expression          => '1=1',\
+       policy_description  => 'Partially redacts Names');\
+    END;\
+    /\
+\
+40)*-- ROWID DETAILS\
+    OOOOOFFFBBBBBBRRR\
+    OOOOO  is the data object number\
+    FFF    is the relative file number of the database\
+    BBBBBB is the block number in the file\
+    RRR    is the row number within the block.\
+    All four numbers must be in base-64 format\
+\
+41)* -- EXTERNAL TABLE\
+  create table DWHODS.DU_W_AALIYEV_201700704_NORMAL\
+    (\
+      cdr_id    VARCHAR2(30)\
+    )\
+    organization external\
+    (\
+      type ORACLE_LOADER\
+      default directory DATA_PUMP_DIR\
+      access parameters\
+      (\
+      records delimited by newline\
+      fields terminated by ":" ldrtrim\
+      (\
+      cdr_id\
+      )\
+      )\
+      location (DATA_PUMP_DIR:'20170704.txt')\
+    )\
+    reject limit 0;\
+\
+42)* -- CREATE FUNCTION\
+    CREATE OR REPLACE FUNCTION CUST_ID_GENERATE(CUST_ID IN NUMBER) RETURN VARCHAR2\
+    IS\
+    customer_id NUMBER(10);\
+    new_code varchar2(300);\
+    new_code2 varchar2(300);\
+    begin\
+    customer_id := cust_id;\
+    FOR i in 1 .. length(customer_id) loop\
+        SELECT code into new_code from mapping_customer t where t.num = SUBSTR(customer_id,i,1);\
+         new_code2 := new_code2 || new_code;\
+    end loop;\
+      return new_code2;\
+    end;\
+    /\
+\
+43)* -- INFO MASKING\
+  SET SERVEROUTPUT ON;\
+  DECLARE\
+\
+  new_card varchar2(500);\
+  CURSOR CARDS IS select distinct card from table_name_here;\
+  TYPE RECORD_TYPE IS TABLE OF CARDS%ROWTYPE;\
+  REC RECORD_TYPE;\
+  k number(10);\
+  j number(10);\
+  l number;\
+  prefix char;\
+\
+  BEGIN\
+\
+  k := 1000000;\
+  L := 0;\
+  OPEN CARDS;\
+    LOOP\
+    FETCH CARDS BULK COLLECT INTO REC;\
+    EXIT WHEN REC.COUNT = 0;\
+      for i in 1 .. 151866 LOOP\
+      j := i + k;\
+      IF L = 3 THEN L := 0; END IF;\
+      for z in 1 .. 3 loop\
+      IF L = '1' then prefix := 'A';\
+      ELSIF L='2' THEN prefix := 'B' ;\
+      ELSE PREFIX := 'C';\
+      END IF;\
+      SELECT REC(I).CARD || ' - ' || prefix || j INTO new_card FROM DUAL;\
+      insert into NEW_CARD_MASKS_MAIN values(rec(i).card, prefix || j);\
+      --DBMS_OUTPUT.PUT_LINE(NEW_CARD);\
+      L := L +1;\
+      exit;\
+      END LOOP;\
+      END LOOP;\
+    END LOOP;\
+    commit;\
+  CLOSE CARDS;\
+\
+  END;\
+  /\
+\
+45)* -- Unable to extend table SYS.AUD$ by 128 in tablespace.SYSTEM\
+  Cause:\
+  Oracle system auditing is turned on (This is the default in Oracle 11-up).\
+\
+  Resolution:\
+  There are two possible solutions:\
+\
+  1. Add a datafile to the SYSTEM tablespace (via util o/13/3); or\
+\
+  2. Truncate the SYS.AUD$ table (and, optionally, disable auditing). Aleph doesnt need these audit records, so SYS.AUD$ can be truncated:\
+\
+  > su - oracle11 [this may be plain "oracle" on your server]\
+  Password:\
+  Execute oracle cshrc\
+  ...\
+  oracle11@abcu(aleph20)~>sqlplus / as sysdba\
+\
+  sys@ALEPH20> truncate table AUD$;\
+\
+  **If you get a "Resource Busy" message, run $alephe_root/aleph_shutdown and restart Oracle.** Then proceed with the above steps.\
+\
+  If aleph_shutdown was run, run $alephe_root/aleph_startup. \
+\
+  The system should now be functional again.\
+\
+46)* -- GENERATING AWR REPORT\
+    set head on\
+    set array 1\
+    set linesize 10000\
+    set pagesize 50000\
+    set long 10000\
+    set echo off\
+    set trimspool on\
+    set colsep ';'\
+    set numformat 9999999999999999.99\
+    set feedback off\
+    set timing on\
+\
+    set serveroutput on size unlimited\
+\
+    spool tmp_batch_awr_control.sql\
+    declare\
+    cursor c is\
+    select to_char(s.startup_time,'dd Mon "at" HH24:mi:ss') instart_fmt\
+    , di.instance_name inst_name\
+    , di.instance_number instance_number\
+    , di.db_name db_name\
+    , di.dbid dbid\
+    , lag (s.snap_id,1,0) over (partition by di.instance_number order by s.snap_id) begin_snap_id\
+    , s.snap_id end_snap_id\
+    , to_char(s.begin_interval_time,'yyyymmddhh24mi') beginsnapdat\
+    , to_char(s.end_interval_time,'yyyymmddhh24mi') endsnapdat\
+    , s.snap_level lvl\
+    from dba_hist_snapshot s\
+    , dba_hist_database_instance di\
+    ,gv$instance i\
+    ,v$database d\
+    where s.dbid = d.dbid\
+    and di.dbid = d.dbid\
+    and s.instance_number = i.instance_number\
+    and di.instance_number = i.instance_number\
+    and di.dbid = s.dbid\
+    and di.instance_number = s.instance_number\
+    and di.startup_time = s.startup_time\
+    --and s.begin_interval_time > trunc(sysdate -1) -- last last 7 days\
+    and s.snap_id between 19334 and 19343\
+    order by di.db_name, i.instance_name, s.snap_id;\
+    begin\
+    for c1 in c\
+    loop\
+    if c1.begin_snap_id > 0 then\
+    dbms_output.put_line('spool c:\\temp\\awr\\AWR_Rpt_'||c1.inst_name||'_Snap_'\
+    ||c1.begin_snap_id||'_thru_'||c1.end_snap_id||'.html');\
+    dbms_output.put_line('select output from table(dbms_workload_repository.awr_report_html( '||c1.dbid||','||\
+    c1.instance_number||','||\
+    c1.begin_snap_id||','||\
+    c1.end_snap_id||',0 ));');\
+    dbms_output.put_line('spool off');\
+    end if;\
+    end loop;\
+    end;\
+    /\
+    spool off;\
+    set heading off\
+    set pages 50000\
+    set linesize 1500\
+    set trimspool on\
+    set trimout on\
+    set term off\
+    set verify off;\
+    set feedback off;\
+    @tmp_batch_awr_control.sql\
+\
+    Generating an AWR Compare report (Non-RAC) from the SQL*Plus command line:\
+    1. Generate AWR Reports\
+      $ sqlplus / as sysdba\
+      SQL> @?/rdbms/admin/awrddrpt.sql\
+    2. First, you need to specify whether you want an HTML or a text report.\
+      Enter value for report_type: html\
+    3. Specify the number of days for which you want to list snapshot Ids for the First Pair\
+      Enter value for num_days: 1\
+    4. After the list displays, you are prompted for the beginning and ending snapshot Id for the First Pair workload repository report.\
+      Enter value for begin_snap: 22665\
+      Enter value for end_snap: 22666\
+    5. Specify the number of days for which you want to list snapshot Ids for the Second Pair\
+      Enter value for num_days2: 1\
+    6. After the list displays, you are prompted for the beginning and ending snapshot Id for the Second Pair workload repository report.\
+      Enter value for begin_snap2: 22667\
+      Enter value for end_snap2: 22668\
+    7. Next, accept the default report name or enter a report name. The default name is accepted in the following example:\
+      The default report file name is awrdiff_1_22665_1_22667.html\
+      Report written to awrdiff_1_22665_1_22667.html\
+\
+47)* -- GENERATING ASH\
+  ALTER SESSION SET NLS_LANGUAGE='AMERICAN';\
+  ALTER SESSION SET NLS_TERRITORY='AMERICA';\
+  spool tmp_batch_ash_control.sql\
+  declare\
+  c_format   CONSTANT VARCHAR2 (22)  := 'DD/MM/YYYY HH24:MI:SS' ;\
+  d1 timestamp;\
+  d2 timestamp;\
+  begin\
+  d1:= to_date('13/04/2018 09:00:00',c_format);\
+  for c in 1 .. 18 loop\
+  d2:=d1+30/1440;\
+  dbms_output.put_line('spool ASH_Rpt_'||to_char(d1,'ddmmyyyy_HH24MISS')||'_thru_'||to_char(d2,'ddmmyyyy_HH24MISS')||'.html');\
+  dbms_output.put_line('select output from table(dbms_workload_repository.ash_report_html( 3854012314,1,to_date('''||to_char(d1,c_format)||''','''||c_format||'''),to_date('''||to_char(d2,c_format)||''','''||c_format||''')));');\
+  dbms_output.put_line('spool off');\
+  d1:=d2;\
+  end loop;\
+  end;\
+  /\
+  spool off;\
+  set heading off\
+  set pages 50000\
+  set linesize 1500\
+  set trimspool on\
+  set trimout on\
+  set term off\
+  set verify off;\
+  set feedback off;\
+  @tmp_batch_ash_control.sql\
+\
+48)* -- RUNNING SQLHC\
+  @sqlhc N agux3azmf389w   -- N means no license or license option none / T means Tuning/Performance\
+\
+49)* -- CHANGE DB SNAPHOT INTERVAL AND RETENTION\
+  exec dbms_workload_repository.modify_snapshot_settings(interval => 30, retention => 21600) -- 30 MINUTE/21600 MINUTE\
+\
+  Check snapshot interval:\
+\
+  select\
+       extract( day from snap_interval) *24*60+\
+       extract( hour from snap_interval) *60+\
+       extract( minute from snap_interval ) "Snapshot Interval",\
+       extract( day from retention) *24*60+\
+       extract( hour from retention) *60+\
+       extract( minute from retention ) "Retention Interval"\
+from dba_hist_wr_control;\
+\
+50)* -- ORA-31631: privileges are required\
+    ORA-39149: cannot link privileged user to non-privileged user when impdp using db link\
+\
+  RUN BELOW STATEMENTS IN DBLINK USER DATABASE.\
+  grant imp_full_database,exp_full_database to LINK_USER;\
+  alter user LINK_USER default role imp_full_database,exp_full_database;\
+\
+51)* -- MSSQL OBJECT FIND\
+     select object_id('view_name_here'); --435532635\
+     select * from sys.sql_modules where object_id='1943014003';\
+\
+52)* -- OPPOSITE OF LIST AGGREGATION(LISTAGG)\
+	WITH test AS\
+          (SELECT col1, col2 FROM table_name_here)\
+         SELECT regexp_substr(col1, '[^,]+', 1, level) result , col2\
+         FROM test\
+         CONNECT BY level = LENGTH(regexp_replace(col1, '[^,]+')) + 1; \
+	\
+53)* -- AUTOMATIC PARTITION BY DAY from NON-PARTITION TO PARTITION	\
+	create table new_partitioned_table\
+	partition by range ( trn_dt )\
+	interval ( NUMTODSINTERVAL(1,'day') )\
+	( partition p1 values less than ( date '2017-01-01' ))\
+	as\
+	select * from non_partition_table t where t.trn_dt between \
+        '01-JAN-2017' and '01-JAN-2019';\
+\
+54)* -- Oracle Tuning Script\
+Drop Tuning TASKS	\
+		execute dbms_sqltune.drop_tuning_task('87s8z2zzpsg88_tuning_task11');\
+		\
+	Create Tuning TASKS\
+		DECLARE\
+		  l_sql_tune_task_id  VARCHAR2(100);\
+		BEGIN\
+		  l_sql_tune_task_id := DBMS_SQLTUNE.create_tuning_task (\
+								  sql_id      => '03q4gv2af36k0',\
+								  scope       => DBMS_SQLTUNE.scope_comprehensive,\
+								  time_limit  => 500,\
+								  task_name   => '03q4gv2af36k0_tuning_task11',\
+								  description => 'Tuning task1 for statement 03q4gv2af36k0');\
+		  DBMS_OUTPUT.put_line('l_sql_tune_task_id: ' || l_sql_tune_task_id);\
+		END;\
+		/\
+		\
+	Executing Tuning TASKS\
+		EXEC DBMS_SQLTUNE.execute_tuning_task(task_name => '03q4gv2af36k0_tuning_task11'); \
+	\
+	Get Tuning Advisor REPORT	\
+		set long 65536\
+		set longchunksize 65536\
+		set linesize 100\
+		select dbms_sqltune.report_tuning_task('03q4gv2af36k0_tuning_task11') from dual;\
+}
